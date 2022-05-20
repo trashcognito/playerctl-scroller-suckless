@@ -59,7 +59,7 @@ int main(int, char**) {
             if (status == DBusInterface::PlaybackStatus::Playing) {
                 rotateText(2);
                 offset++;
-                offset %= ((strlen(full) > len) ? len : strlen(full));
+                offset %= strlen(full);
             } else {
                 rotateText(0);
             }

@@ -34,7 +34,7 @@
 #define COMMAND_GET_METADATA_POST " /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Get string:\"org.mpris.MediaPlayer2.Player\" string:\"Metadata\" 2> /dev/null"
 #define COMMAND_FUNNEL_ARTIST "grep -A 2 'artist' | tail -1 | sed 's/.*string \"//g;s/.$//g'"
 #define COMMAND_FUNNEL_TITLE_ONE "grep -A 1 'title' | tail -1 | sed 's/.*string \"//g;s/.$//g'"
-#define COMMAND_FUNNEL_TITLE_TWO "grep -A 1 'url' | tail -1 | sed 's/.*string \"//g;s/.$//g' | rev | cut -d/ -f1 | rev | sed 's@+@ @g;s@%@\\\\x@g' | xargs -0 printf %b | sed 's/\"/\\\\\"/g'"
+#define COMMAND_FUNNEL_TITLE_TWO "grep -A 1 'url' | tail -1 | sed 's/.*string \"//g;s/.$//g' | rev | cut -d/ -f1 | rev | sed 's@+@ @g;s@%@\\\\x@g' | xargs -0 printf %b | sed 's/\"/\\\"/g'"
 #ifdef I3
 #define COMMAND_GET_I3_WORKSPACES "i3-msg -t get_workspaces 2> /dev/null | grep -o \"num\" | wc -l"
 #endif
