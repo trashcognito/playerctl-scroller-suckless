@@ -70,6 +70,7 @@ char *funnel_command(const char *command, const char *input) {
         while ((delta = read(outpipes[0], &ret[curpos], 1023-curpos))) {
             curpos += delta;
         };
+        ret[curpos] = 0x00;
         
         close(outpipes[0]);
         removeNL(ret);

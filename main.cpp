@@ -50,7 +50,7 @@ int main(int, char**) {
         }
 
         #ifdef ICONS
-            std::cout << interface.get_prefix();
+            std::cout << interface.get_prefix() << " ";
         #endif
 
         #ifndef FORCE_ROTATE
