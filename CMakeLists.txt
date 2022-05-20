@@ -6,6 +6,8 @@ enable_testing()
 
 add_executable(playerctl-scroller-suckless main.cpp cscroll.cpp dbus_interface.cpp thread_helper.cpp)
 
+install(TARGETS playerctl-scroller-suckless DESTINATION bin)
+
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 include(CPack)
