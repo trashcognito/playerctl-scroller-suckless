@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <unistd.h>
+#include <sys/wait.h>
 #include "thread_helper.hpp"
 
 void removeNL(char* arr) {
@@ -53,8 +54,8 @@ char *funnel_command(const char *command, const char *input) {
     pipe(outpipes);
     
     write(inpipes[1], input, strlen(input));
-
-    if (fork()) {
+    pid_t forked_process = fork();
+    if (forked_process) {
         //main
         close(inpipes[0]);
         close(outpipes[1]);
@@ -70,8 +71,23 @@ char *funnel_command(const char *command, const char *input) {
         while ((delta = read(outpipes[0], &ret[curpos], 1023-curpos))) {
             curpos += delta;
         };
+
         ret[curpos] = 0x00;
+
+        int status;
+
+        while (wait(&status) != forked_process);
+
+        //Optional error checking
         
+        /*
+        if (status != 0) {
+            fprintf(stderr, "Command did not run properly\n");
+            free(ret);
+            exit(1);
+        }
+        */
+
         close(outpipes[0]);
         removeNL(ret);
         return ret;
