@@ -1,29 +1,50 @@
 #include "dbus_interface.hpp"
 #include "dbus_interface.hpp"
 
+#include <array>
 #include <cstdlib>
+#include <iostream>
 #include <regex>
+#include <string>
+#include <tuple>
+#include <vector>
 #include "config.hpp"
+#include "giomm/dbusconnection.h"
+#include "giomm/dbusmessage.h"
+#include "giomm/dbusproxy.h"
+#include "glibmm/ustring.h"
+#include "glibmm/value.h"
+#include "glibmm/variant.h"
+#include "glibmm/variantiter.h"
+#include "glibmm/varianttype.h"
 #include "thread_helper.hpp"
 #include "dbus_interface.hpp"
 #include "cscroll.hpp"
 
-DBusInterface::DBusInterface() {
+DBusInterface::DBusInterface(Glib::RefPtr<Gio::DBus::Connection> conn) {
     button_status = PlaybackStatus::Playing;
+    dbus_conn = conn;
 };
 
 std::string DBusInterface::get_prefix() {
-    char *temp = get_stdout(COMMAND_INSTANCE);
-    std::string instance(temp);
-    free(temp);
+    
+    auto reply = dbus_conn->call_sync("/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties", "Get", Glib::Variant<std::tuple<Glib::VariantBase>>::create_tuple(std::vector<Glib::VariantBase>({Glib::Variant<Glib::ustring>::create("com.github.altdesktop.playerctld"), Glib::Variant<Glib::ustring>::create("PlayerNames")})), "org.mpris.MediaPlayer2.playerctld");
+    GVariant *output;
+    g_variant_get_child(reply.gobj(), 0, "v", &output);
+    
+    //Glib::wrap(output);
 
-    if (std::regex_match(instance, std::regex("/chrom.*/"))) {
+    GVariant *mystring = g_variant_get_child_value(output, 0);
+
+    auto res = Glib::VariantBase::cast_dynamic<Glib::Variant<Glib::ustring>>(Glib::wrap(mystring)).get();
+
+    if (res.find("chrom") != Glib::ustring::npos) {
         return std::string("");
     }
-    if (instance == "firefox") {
+    if (res.find("firefox") != Glib::ustring::npos) {
         return std::string("");
     }
-    if (std::regex_match(instance, std::regex("/spotify.*/"))) {
+    if (res.find("spotify") != Glib::ustring::npos) {
         return std::string("");
     }
     return std::string("");

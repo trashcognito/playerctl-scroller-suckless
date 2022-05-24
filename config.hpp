@@ -29,7 +29,6 @@
 #define COMMAND_GET_DEST "dbus-send --print-reply --dest=org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus.ListNames 2> /dev/null | grep mpris | grep " PLAYER " | sed 's/.*string \"//g;s/.$//g'"
 #define COMMAND_STATUS_PRE "dbus-send --print-reply --dest="
 #define COMMAND_STATUS_POST " /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Get string:org.mpris.MediaPlayer2.Player string:PlaybackStatus 2> /dev/null | grep variant | sed 's/.*string \"//g;s/.$//g'"
-#define COMMAND_INSTANCE "dbus-send --print-reply --dest=org.mpris.MediaPlayer2.playerctld /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Get string:\"com.github.altdesktop.playerctld\" string:\"PlayerNames\" 2> /dev/null | grep string | head -1 | sed 's/.*Player2\\.//g;s/.$//g;s/\\..*//g'"
 #define COMMAND_GET_METADATA_PRE "dbus-send --print-reply --dest="
 #define COMMAND_GET_METADATA_POST " /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Get string:\"org.mpris.MediaPlayer2.Player\" string:\"Metadata\" 2> /dev/null"
 #define COMMAND_FUNNEL_ARTIST "grep -A 2 'artist' | tail -1 | sed 's/.*string \"//g;s/.$//g'"

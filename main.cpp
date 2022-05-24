@@ -6,6 +6,11 @@
 #include <string>
 #include <regex>
 #include <unistd.h>
+
+#include <gtkmm.h>
+
+#include "giomm/application.h"
+#include "gtkmm/application.h"
 #include "thread_helper.hpp"
 #include "config.hpp"
 #include "cscroll.hpp"
@@ -28,13 +33,19 @@ void update_i3() {
 
 int main(int, char**) {
     setlocale(LC_ALL, "");
+
+    auto app = Gtk::Application::create("org.trash.playerctl-scroller-suckless");
+    app->register_application();
+
+    auto dbus_conn = app->get_dbus_connection();
+
     if (strstr(PLAYER, "playerctl") != NULL) {
         system(COMMAND_SETUP_PLAYERCTL);
     }
     full = (char*) calloc(maxLength, sizeof(char));
     int time = 0;
 
-    DBusInterface interface;
+    DBusInterface interface(dbus_conn);
 
     while (true) {
         interface.update_buttons();
