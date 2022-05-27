@@ -3,8 +3,11 @@
 
 #include <array>
 #include <cstdlib>
+#include <ios>
 #include <iostream>
+#include <iterator>
 #include <regex>
+#include <sstream>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -12,11 +15,14 @@
 #include "giomm/dbusconnection.h"
 #include "giomm/dbusmessage.h"
 #include "giomm/dbusproxy.h"
+#include "glibmm/unicode.h"
 #include "glibmm/ustring.h"
 #include "glibmm/value.h"
 #include "glibmm/variant.h"
+#include "glibmm/variantdict.h"
 #include "glibmm/variantiter.h"
 #include "glibmm/varianttype.h"
+#include "sigc++/reference_wrapper.h"
 #include "thread_helper.hpp"
 #include "dbus_interface.hpp"
 #include "cscroll.hpp"
@@ -24,6 +30,9 @@
 DBusInterface::DBusInterface(Glib::RefPtr<Gio::DBus::Connection> conn) {
     button_status = PlaybackStatus::Playing;
     dbus_conn = conn;
+    if (strstr(PLAYER, "playerctl") != NULL) {
+        conn->call_sync("/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties", "GetAll", Glib::Variant<std::tuple<Glib::VariantBase>>::create_tuple(std::vector<Glib::VariantBase>({Glib::Variant<Glib::ustring>::create("org.mpris.MediaPlayer2.Player")})), "org.mpris.MediaPlayer2.playerctld");
+    }
 };
 
 std::string DBusInterface::get_prefix() {
@@ -31,10 +40,9 @@ std::string DBusInterface::get_prefix() {
     auto reply = dbus_conn->call_sync("/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties", "Get", Glib::Variant<std::tuple<Glib::VariantBase>>::create_tuple(std::vector<Glib::VariantBase>({Glib::Variant<Glib::ustring>::create("com.github.altdesktop.playerctld"), Glib::Variant<Glib::ustring>::create("PlayerNames")})), "org.mpris.MediaPlayer2.playerctld");
     GVariant *output;
     g_variant_get_child(reply.gobj(), 0, "v", &output);
-    
-    //Glib::wrap(output);
-
     GVariant *mystring = g_variant_get_child_value(output, 0);
+
+    
 
     auto res = Glib::VariantBase::cast_dynamic<Glib::Variant<Glib::ustring>>(Glib::wrap(mystring)).get();
 
@@ -50,31 +58,41 @@ std::string DBusInterface::get_prefix() {
     return std::string("");
 }
 
+Glib::ustring DBusInterface::get_dest() {
+    auto reply = dbus_conn->call_sync("/org/freedesktop/DBus", "org.freedesktop.DBus", "ListNames", Glib::Variant<std::tuple<Glib::VariantBase>>::create_tuple(std::vector<Glib::VariantBase>()), "org.freedesktop.DBus");
+    auto output = Glib::wrap(g_variant_get_child_value(reply.gobj(), 0));
+    gsize len;
+    auto my_list = g_variant_get_strv(output.gobj(), &len);
+    Glib::ustring retval("");
+    for (int i=0;i<len;i++) {
+        Glib::ustring temp(my_list[i]);
+        if (temp.find("mpris") != Glib::ustring::npos) {
+            if (temp.find(PLAYER) != Glib::ustring::npos) {
+                retval = temp;
+                break;
+            }
+        }
+    }
+    g_free(my_list);
+    return retval;
+}
+
 DBusInterface::PlaybackStatus DBusInterface::get_status() {
-    char *dest = get_stdout(COMMAND_GET_DEST);
-    if (strlen(dest) == 0) {
-        free(dest);
-        return PlaybackStatus::Offline;
-    }
-    std::string get_status_command;
+    Glib::ustring dest = this->get_dest();
 
-    get_status_command.append(COMMAND_STATUS_PRE);
-    get_status_command.append(dest);
-    get_status_command.append(COMMAND_STATUS_POST);
-    free(dest);
-
-    char *temp = get_stdout(get_status_command.c_str());
-    std::string status(temp);
-    free(temp);
+    auto reply = dbus_conn->call_sync("/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties", "Get", Glib::Variant<std::tuple<Glib::VariantBase>>::create_tuple(std::vector<Glib::VariantBase>({Glib::Variant<Glib::ustring>::create("org.mpris.MediaPlayer2.Player"), Glib::Variant<Glib::ustring>::create("PlaybackStatus")})), dest);
+    GVariant *output;
+    g_variant_get_child(reply.gobj(), 0, "v", &output);
+    auto res = Glib::VariantBase::cast_dynamic<Glib::Variant<Glib::ustring>>(Glib::wrap(output)).get();
     
-    if (status.length() == 0) {
+    if (res.length() == 0) {
         return PlaybackStatus::Offline;
     }
     
-    if (status.find("Playing") != std::string::npos) {
+    if (res.find("Playing") != Glib::ustring::npos) {
         return PlaybackStatus::Playing;
     }
-    if (status.find("Paused") != std::string::npos) {
+    if (res.find("Paused") != Glib::ustring::npos) {
         return PlaybackStatus::Paused;
     }
 
@@ -82,40 +100,50 @@ DBusInterface::PlaybackStatus DBusInterface::get_status() {
 }
 
 void DBusInterface::update_cscroller() {
-    char *dest = get_stdout(COMMAND_GET_DEST);
-    if (strlen(dest) == 0) {
-        free(dest);
-        return;
+    Glib::ustring dest = this->get_dest();
+
+    auto reply = dbus_conn->call_sync("/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties", "Get", Glib::Variant<std::tuple<Glib::VariantBase>>::create_tuple(std::vector<Glib::VariantBase>({Glib::Variant<Glib::ustring>::create("org.mpris.MediaPlayer2.Player"), Glib::Variant<Glib::ustring>::create("Metadata")})), dest);
+    GVariant *output;
+    g_variant_get_child(reply.gobj(), 0, "v", &output);
+    auto wrapped = Glib::wrap(output);
+    auto res = Glib::VariantDict::create(wrapped);
+    
+    Glib::ustring title;
+    res->lookup_value("xesam:title", title);
+    
+    Glib::ustring artist;
+    Glib::VariantBase artist_container;
+    if (res->lookup_value_variant("xesam:artist", Glib::VARIANT_TYPE_ARRAY, artist_container)) {
+        auto artist_obj = Glib::VariantBase::cast_dynamic<Glib::Variant<Glib::ustring>>(Glib::wrap(g_variant_get_child_value(artist_container.gobj(), 0)));
+        artist = artist_obj.get();
     }
-    std::string get_metadata_command;
-
-    get_metadata_command.append(COMMAND_GET_METADATA_PRE);
-    get_metadata_command.append(dest);
-    get_metadata_command.append(COMMAND_GET_METADATA_POST);
-    free(dest);
-
-    char *temp = get_stdout_multiline(get_metadata_command.c_str());
-    std::string metadata(temp);
-    free(temp);
-
-    temp = funnel_command(COMMAND_FUNNEL_TITLE_ONE, metadata.c_str());
-    std::string title(temp);
-    free(temp);
-    title = title.substr(0, title.find("\n"));
 
     if (title.length() == 0) {
-        temp = funnel_command(COMMAND_FUNNEL_TITLE_TWO, metadata.c_str());
-        title = std::string(temp);
-        free(temp);
+        Glib::ustring uri_r;
+        res->lookup_value("xesam:url", uri_r);
+        Glib::ustring uri = uri_r.substr(uri_r.find_last_of('/')+1);
+        
+        //escape uri
+        std::stringstream output;
+        for (int i = 0; i < uri.length(); i++) {
+            if (uri[i] == '%') {
+                if (i + 2 < uri.length()) {
+                    output << (char)((Glib::Unicode::xdigit_value(uri[i+1]) << 4) | (Glib::Unicode::xdigit_value(uri[i+2])));
+                    i += 2;
+                }
+
+            } else if (uri[i] == '+') {
+                output << ' ';
+            } else {
+                output << (char)uri[i];
+            }
+        }
+        title = output.str();
     }
 
-    temp = funnel_command(COMMAND_FUNNEL_ARTIST, metadata.c_str());
-    std::string artist(temp);
-    free(temp);
-    artist = artist.substr(0, artist.find("\n"));
 
     std::string prompt;
-    if (artist.length() != 0 && artist != std::string("7\U00000004")) {
+    if (artist.length() != 0) {
         prompt.append(artist);
         prompt.append(MIDDLE);
     }

@@ -17,6 +17,7 @@ class DBusInterface {
     void update_cscroller();
     void update_buttons();
     private:
+    Glib::ustring get_dest();
     Glib::RefPtr<Gio::DBus::Connection> dbus_conn;
     PlaybackStatus button_status;
 };

@@ -39,9 +39,6 @@ int main(int, char**) {
 
     auto dbus_conn = app->get_dbus_connection();
 
-    if (strstr(PLAYER, "playerctl") != NULL) {
-        system(COMMAND_SETUP_PLAYERCTL);
-    }
     full = (char*) calloc(maxLength, sizeof(char));
     int time = 0;
 
