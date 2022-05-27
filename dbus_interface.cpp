@@ -31,13 +31,18 @@ DBusInterface::DBusInterface(Glib::RefPtr<Gio::DBus::Connection> conn) {
     button_status = PlaybackStatus::Playing;
     dbus_conn = conn;
     if (strstr(PLAYER, "playerctl") != NULL) {
-        conn->call_sync("/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties", "GetAll", Glib::Variant<std::tuple<Glib::VariantBase>>::create_tuple(std::vector<Glib::VariantBase>({Glib::Variant<Glib::ustring>::create("org.mpris.MediaPlayer2.Player")})), "org.mpris.MediaPlayer2.playerctld");
+        try {
+            conn->call_sync("/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties", "GetAll", Glib::Variant<std::tuple<Glib::VariantBase>>::create_tuple(std::vector<Glib::VariantBase>({Glib::Variant<Glib::ustring>::create("org.mpris.MediaPlayer2.Player")})), "org.mpris.MediaPlayer2.playerctld");
+        } catch (Glib::Error e) {
+            //pass
+        }
     }
 };
 
 std::string DBusInterface::get_prefix() {
     
     auto reply = dbus_conn->call_sync("/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties", "Get", Glib::Variant<std::tuple<Glib::VariantBase>>::create_tuple(std::vector<Glib::VariantBase>({Glib::Variant<Glib::ustring>::create("com.github.altdesktop.playerctld"), Glib::Variant<Glib::ustring>::create("PlayerNames")})), "org.mpris.MediaPlayer2.playerctld");
+    
     GVariant *output;
     g_variant_get_child(reply.gobj(), 0, "v", &output);
     GVariant *mystring = g_variant_get_child_value(output, 0);
@@ -76,8 +81,12 @@ Glib::ustring DBusInterface::get_dest() {
 
 DBusInterface::PlaybackStatus DBusInterface::get_status() {
     Glib::ustring dest = this->get_dest();
-
-    auto reply = dbus_conn->call_sync("/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties", "Get", Glib::Variant<std::tuple<Glib::VariantBase>>::create_tuple(std::vector<Glib::VariantBase>({Glib::Variant<Glib::ustring>::create("org.mpris.MediaPlayer2.Player"), Glib::Variant<Glib::ustring>::create("PlaybackStatus")})), dest);
+    Glib::VariantContainerBase reply;
+    try {
+        reply = dbus_conn->call_sync("/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties", "Get", Glib::Variant<std::tuple<Glib::VariantBase>>::create_tuple(std::vector<Glib::VariantBase>({Glib::Variant<Glib::ustring>::create("org.mpris.MediaPlayer2.Player"), Glib::Variant<Glib::ustring>::create("PlaybackStatus")})), dest);
+    } catch (Gio::Error e) {
+        return PlaybackStatus::Offline;
+    }
     GVariant *output;
     g_variant_get_child(reply.gobj(), 0, "v", &output);
     auto res = Glib::VariantBase::cast_dynamic<Glib::Variant<Glib::ustring>>(Glib::wrap(output)).get();

@@ -83,6 +83,7 @@ class MyApplication : Gtk::Application {
         MyApplication(): Gtk::Application("org.trash.playerctl-scroller-suckless") {
             register_application();
             auto dbus_conn = get_dbus_connection();
+            
             interface = new DBusInterface(dbus_conn);
         }
 
