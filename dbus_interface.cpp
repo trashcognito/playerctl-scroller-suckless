@@ -41,9 +41,6 @@ std::string DBusInterface::get_prefix() {
     GVariant *output;
     g_variant_get_child(reply.gobj(), 0, "v", &output);
     GVariant *mystring = g_variant_get_child_value(output, 0);
-
-    
-
     auto res = Glib::VariantBase::cast_dynamic<Glib::Variant<Glib::ustring>>(Glib::wrap(mystring)).get();
 
     if (res.find("chrom") != Glib::ustring::npos) {
@@ -84,7 +81,6 @@ DBusInterface::PlaybackStatus DBusInterface::get_status() {
     GVariant *output;
     g_variant_get_child(reply.gobj(), 0, "v", &output);
     auto res = Glib::VariantBase::cast_dynamic<Glib::Variant<Glib::ustring>>(Glib::wrap(output)).get();
-    
     if (res.length() == 0) {
         return PlaybackStatus::Offline;
     }
