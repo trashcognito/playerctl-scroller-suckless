@@ -31,59 +31,75 @@ void update_i3() {
 
 #endif
 
-int main(int, char**) {
+class MyApplication : Gtk::Application {
+    public:
+        int run() {
+            full = (char*) calloc(maxLength, sizeof(char));
+            int time = 0;
+
+            while (true) {
+                interface->update_buttons();
+                DBusInterface::PlaybackStatus status = interface->get_status();
+                if (status == DBusInterface::PlaybackStatus::Offline) {
+                    std::cout << std::endl << std::flush;
+                    usleep(1000000*DELAY);
+                    continue;
+                }
+
+                if (time == 0 || (INTERVAL > 0 && time % INTERVAL == 0)) {
+                    interface->update_cscroller();
+                }
+
+                #ifdef ICONS
+                    std::cout << interface->get_prefix() << " ";
+                #endif
+
+                #ifndef FORCE_ROTATE
+                if (strlen(full) > len) {
+                #endif
+                    if (status == DBusInterface::PlaybackStatus::Playing) {
+                        rotateText(2);
+                        offset++;
+                        offset %= strlen(full);
+                    } else {
+                        rotateText(0);
+                    }
+                #ifndef FORCE_ROTATE
+                } else {
+                    rotateText(1);
+                }
+                #endif
+                #ifdef I3
+                update_i3();
+                #endif
+
+                std::cout << std::endl << std::flush;
+
+                usleep(1000000*DELAY);
+                time++;
+            }
+        }
+
+        MyApplication(): Gtk::Application(id) {
+            register_application();
+            auto dbus_conn = get_dbus_connection();
+            interface = new DBusInterface(dbus_conn);
+        }
+
+        ~MyApplication() {
+            free(interface);
+        }
+    private:
+        std::string id = "org.trash.playerctl-scroller-suckless";
+        DBusInterface *interface;
+
+};
+
+
+int main(int argc, char** argv) {
     setlocale(LC_ALL, "");
 
-    auto app = Gtk::Application::create("org.trash.playerctl-scroller-suckless");
-    app->register_application();
-
-    auto dbus_conn = app->get_dbus_connection();
-
-    full = (char*) calloc(maxLength, sizeof(char));
-    int time = 0;
-
-    DBusInterface interface(dbus_conn);
-
-    while (true) {
-        interface.update_buttons();
-        DBusInterface::PlaybackStatus status = interface.get_status();
-        if (status == DBusInterface::PlaybackStatus::Offline) {
-            std::cout << std::endl << std::flush;
-            usleep(1000000*DELAY);
-            continue;
-        }
-
-        if (time == 0 || (INTERVAL > 0 && time % INTERVAL == 0)) {
-            interface.update_cscroller();
-        }
-
-        #ifdef ICONS
-            std::cout << interface.get_prefix() << " ";
-        #endif
-
-        #ifndef FORCE_ROTATE
-        if (strlen(full) > len) {
-        #endif
-            if (status == DBusInterface::PlaybackStatus::Playing) {
-                rotateText(2);
-                offset++;
-                offset %= strlen(full);
-            } else {
-                rotateText(0);
-            }
-        #ifndef FORCE_ROTATE
-        } else {
-            rotateText(1);
-        }
-        #endif
-        #ifdef I3
-        update_i3();
-        #endif
-
-        std::cout << std::endl << std::flush;
-
-        usleep(1000000*DELAY);
-        time++;
-    }
+    auto app = new MyApplication();
+    return app->run();
 }
 
