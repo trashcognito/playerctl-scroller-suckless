@@ -10,6 +10,7 @@
 #include <gtkmm.h>
 
 #include "giomm/application.h"
+#include "giomm/error.h"
 #include "gtkmm/application.h"
 #include "thread_helper.hpp"
 #include "config.hpp"
@@ -81,6 +82,7 @@ class MyApplication : Gtk::Application {
         }
 
         MyApplication(): Gtk::Application("org.trash.playerctl-scroller-suckless") {
+            set_flags(Gio::APPLICATION_NON_UNIQUE);
             register_application();
             auto dbus_conn = get_dbus_connection();
             
@@ -98,8 +100,12 @@ class MyApplication : Gtk::Application {
 
 int main(int argc, char** argv) {
     setlocale(LC_ALL, "");
-
+    try {
     auto app = new MyApplication();
     return app->run();
+    } catch (Gio::Error e) {
+        std::cerr << e.what() << std::endl;
+        return -1;
+    };
 }
 
